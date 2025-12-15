@@ -1,40 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# 💰 Controle Financeiro
 
-## Getting Started
+Sistema completo de controle financeiro pessoal desenvolvido com Next.js, TypeScript e MongoDB.
 
-First, run the development server:
+## 🚀 Funcionalidades
 
+- ✅ Autenticação com NextAuth (Email/Senha e Google)
+- ✅ Gestão de Transações (Receitas e Despesas)
+- ✅ Gestão de Investimentos (Aplicações e Resgates)
+- ✅ Dashboard com Cards de Resumo
+- ✅ Histórico com Filtros Avançados
+- ✅ Sistema de Tags Coloridas
+- ✅ Modo Escuro
+- ✅ Cálculo Automático de Patrimônio
+- ✅ Gestão de Fornecedores, Formas de Pagamento e Categorias
+
+## 🛠️ Tecnologias
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: MongoDB com Mongoose
+- **Autenticação**: NextAuth.js
+- **Gráficos**: Chart.js (preparado para implementação futura)
+
+## 📦 Instalação
+
+### Pré-requisitos
+
+- Node.js 18+ instalado
+- Conta no MongoDB Atlas (gratuito)
+
+### Passo a Passo
+
+1. Clone o repositório:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/seu-usuario/controle-financeiro.git
+cd controle-financeiro
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Instale as dependências:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+3. Configure as variáveis de ambiente:
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+Crie um arquivo `.env.local` na raiz do projeto:
+```env
+# Database
+MONGODB_URI=sua-connection-string-do-mongodb
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+# NextAuth
+NEXTAUTH_SECRET=gere-com: openssl rand -base64 32
+NEXTAUTH_URL=http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Google OAuth (opcional)
+GOOGLE_CLIENT_ID=seu-google-client-id
+GOOGLE_CLIENT_SECRET=seu-google-client-secret
+```
 
-## Learn More
+4. Execute o projeto:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+5. Acesse no navegador:
+```
+http://localhost:3000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+## 🗄️ Configurar MongoDB
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Acesse [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register)
+2. Crie um cluster gratuito
+3. Crie um usuário de banco de dados
+4. Libere acesso de qualquer IP (0.0.0.0/0)
+5. Obtenha a connection string e adicione no `.env.local`
 
-## Deploy on Vercel
+## 📱 Estrutura do Projeto
+```
+controle-financeiro/
+├── src/
+│   ├── components/        # Componentes React
+│   ├── context/          # Context API (Tema)
+│   ├── hooks/            # Custom Hooks
+│   ├── lib/              # Configurações e Models
+│   ├── pages/            # Páginas Next.js
+│   ├── styles/           # Estilos globais
+│   └── types/            # TypeScript types
+├── public/               # Arquivos públicos
+└── ...
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🎯 Como Usar
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+1. **Cadastre-se** ou faça **login**
+2. Acesse o **Dashboard** para ver o resumo
+3. Vá em **Lançamento** para adicionar receitas/despesas
+4. Consulte o **Histórico** com filtros avançados
+5. Gerencie seus **Investimentos**
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests.
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT.
+
+## 👨‍💻 Autor
+
+Desenvolvido por [Seu Nome](https://github.com/seu-usuario)
