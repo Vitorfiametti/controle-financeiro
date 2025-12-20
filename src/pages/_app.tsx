@@ -1,7 +1,7 @@
-import '@/styles/globals.css';
-import type { AppProps } from 'next/app';
-import { SessionProvider } from 'next-auth/react';
-import { ThemeProvider } from '@/context/ThemeContext';
+import '@/styles/globals.css'
+import type { AppProps } from 'next/app'
+import { SessionProvider } from 'next-auth/react'
+import { ThemeProvider } from '@/context/ThemeContext'
 
 export default function App({ 
   Component, 
@@ -13,5 +13,5 @@ export default function App({
         <Component {...pageProps} />
       </ThemeProvider>
     </SessionProvider>
-  );
+  )
 }

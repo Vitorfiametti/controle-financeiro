@@ -1,6 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import Layout from '@/components/Layout/Layout';
 import BalanceCards from '@/components/Dashboard/BalanceCards';
+import EvolucaoPatrimonial from '@/components/Dashboard/EvolucaoPatrimonial';
+import ProjecoesFinanceiras from '@/components/Dashboard/ProjecoesFinanceiras';
+import DonutChart from '@/components/Dashboard/DonutChart';
+import ReceitasDespesasChart from '@/components/Dashboard/ReceitasDespesasChart';
+import FornecedorChart from '@/components/Dashboard/FornecedorChart';
 import { useTransactions, useInvestments } from '@/hooks';
 import {
   calculateReceitas,
@@ -37,13 +42,12 @@ export default function Dashboard() {
   // Filtrar transações por data
   const filteredTransactions = useMemo(() => {
     return iTransactions.filter(t => {
-      if (!t.isInvestmentTransfer) {
-        const transactionDate = new Date(t.date);
-        const startDate = new Date(dataInicio);
-        const endDate = new Date(dataFim);
-        return transactionDate >= startDate && transactionDate <= endDate;
-      }
-      return false;
+      if (t.isInvestmentTransfer) return false;
+      
+      const transactionDate = new Date(t.date);
+      const startDate = new Date(dataInicio);
+      const endDate = new Date(dataFim);
+      return transactionDate >= startDate && transactionDate <= endDate;
     });
   }, [iTransactions, dataInicio, dataFim]);
 
@@ -62,7 +66,7 @@ export default function Dashboard() {
     return (
       <Layout>
         <div className="flex justify-center items-center h-64">
-          <div className="spinner border-4 border-gray-300 border-t-blue-500 rounded-full w-12 h-12 animate-spin"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
         </div>
       </Layout>
     );
@@ -70,7 +74,7 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Cards de Balanço */}
         <BalanceCards
           receitas={receitas}
@@ -81,8 +85,9 @@ export default function Dashboard() {
 
         {/* Filtro de Data */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-2xl font-bold text-gray-800 mb-4 text-center">
-            📅 Filtro por Data
+          <h3 className="text-xl font-bold text-gray-800 mb-4 text-center flex items-center justify-center gap-2">
+            <span>📅</span>
+            <span>Filtro por Data</span>
           </h3>
           <div className="flex flex-wrap gap-4 justify-center items-end">
             <div>
@@ -109,23 +114,62 @@ export default function Dashboard() {
             </div>
             <button
               onClick={clearFilters}
-              className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition font-semibold"
+              className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition font-semibold flex items-center gap-2"
             >
-              🔄 Limpar Filtros
+              <span>🔄</span>
+              <span>Limpar Filtros</span>
             </button>
           </div>
+        </div>
+
+        {/* Evolução Patrimonial */}
+        <EvolucaoPatrimonial 
+          transactions={iTransactions} 
+          investments={iInvestments}
+        />
+
+        {/* Projeções Financeiras */}
+        <ProjecoesFinanceiras transactions={iTransactions} />
+
+        {/* Gráficos de Pizza - Receitas e Despesas por Categoria */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <DonutChart 
+            transactions={filteredTransactions}
+            type="receita"
+            title="Receitas por Categoria"
+            icon="💰"
+          />
+          <DonutChart 
+            transactions={filteredTransactions}
+            type="despesa"
+            title="Despesas por Categoria"
+            icon="💸"
+          />
+          <ReceitasDespesasChart transactions={filteredTransactions} />
+        </div>
+
+        {/* Gráficos de Maiores Transações */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <FornecedorChart transactions={filteredTransactions} type="gasto" />
+          <FornecedorChart transactions={filteredTransactions} type="recebido" />
         </div>
 
         {/* Informações Adicionais */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-xl font-bold mb-2">📊 Total de Transações</h3>
+            <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+              <span>📊</span>
+              <span>Total de Transações</span>
+            </h3>
             <p className="text-4xl font-bold">{transactions.filter(t => !t.isInvestmentTransfer).length}</p>
             <p className="text-sm mt-2 opacity-90">Registradas no sistema</p>
           </div>
 
           <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl shadow-lg p-6">
-            <h3 className="text-xl font-bold mb-2">💼 Total de Investimentos</h3>
+            <h3 className="text-xl font-bold mb-2 flex items-center gap-2">
+              <span>💼</span>
+              <span>Total de Investimentos</span>
+            </h3>
             <p className="text-4xl font-bold">{investments.length}</p>
             <p className="text-sm mt-2 opacity-90">Operações realizadas</p>
           </div>
@@ -133,8 +177,12 @@ export default function Dashboard() {
 
         {/* Informações sobre período filtrado */}
         <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 text-center">
-          <p className="text-blue-800 font-semibold">
-            📅 Exibindo dados de <span className="font-bold">{new Date(dataInicio).toLocaleDateString('pt-BR')}</span> até <span className="font-bold">{new Date(dataFim).toLocaleDateString('pt-BR')}</span>
+          <p className="text-blue-800 font-semibold flex items-center justify-center gap-2 flex-wrap">
+            <span>📅</span>
+            <span>Exibindo dados de</span>
+            <span className="font-bold">{new Date(dataInicio).toLocaleDateString('pt-BR')}</span>
+            <span>até</span>
+            <span className="font-bold">{new Date(dataFim).toLocaleDateString('pt-BR')}</span>
           </p>
           <p className="text-blue-600 text-sm mt-1">
             Os valores de <strong>Saldo Atual</strong> e <strong>Patrimônio Total</strong> consideram todas as movimentações
