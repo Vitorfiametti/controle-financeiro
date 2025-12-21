@@ -249,7 +249,7 @@ export default function Home() {
         <footer className="bg-gray-50 border-t border-gray-200 py-8">
           <div className="max-w-7xl mx-auto px-6 text-center">
             <p className="text-gray-600">
-              © 2025 ContaFy. Todos os direitos reservados.
+              © 2025 ContaFy. Todos os direitos reservados para o criador Vitor Fiametti.
             </p>
           </div>
         </footer>
