@@ -19,7 +19,7 @@ export default function Navbar() {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const handleLogout = () => {
-    signOut({ callbackUrl: '/auth/signin' });
+    signOut({ callbackUrl: '/' }); // ← AQUI: mudei para '/'
   };
 
   const getUserInitials = (name?: string | null) => {
@@ -41,8 +41,8 @@ export default function Navbar() {
             <Image 
               src="/logo-contafy.png" 
               alt="ContaFy" 
-              width={240}   // +50% maior
-              height={60}   // +50% maior  
+              width={240}
+              height={60}
               className="h-200 w-auto"
               priority
             />

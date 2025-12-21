@@ -1,15 +1,12 @@
-﻿import mongoose, { Schema, Model } from 'mongoose';
+﻿import mongoose, { Schema, Document } from 'mongoose';
 
-export interface IUser {
-  _id?: string;
+export interface IUser extends Document {
   name: string;
   email: string;
-  password?: string;
-  image?: string;
-  provider?: 'google' | 'credentials';
-  role: 'user' | 'admin';
-  createdAt?: Date;
-  updatedAt?: Date;
+  password: string;
+  googleId?: string; // ← ADICIONAR
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -17,29 +14,26 @@ const UserSchema = new Schema<IUser>(
     name: {
       type: String,
       required: [true, 'Nome é obrigatório'],
+      trim: true,
     },
     email: {
       type: String,
       required: [true, 'Email é obrigatório'],
       unique: true,
       lowercase: true,
+      trim: true,
     },
     password: {
       type: String,
-      select: false,
+      required: function() {
+        // Senha obrigatória apenas se não tiver googleId
+        return !this.googleId;
+      },
     },
-    image: {
+    googleId: {
       type: String,
-    },
-    provider: {
-      type: String,
-      enum: ['google', 'credentials'],
-      default: 'credentials',
-    },
-    role: {
-      type: String,
-      enum: ['user', 'admin'],
-      default: 'user',
+      unique: true,
+      sparse: true, // Permite múltiplos documentos sem este campo
     },
   },
   {
@@ -47,6 +41,4 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
-
-export default User;
+export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
