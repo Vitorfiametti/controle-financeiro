@@ -1,34 +1,40 @@
-import mongoose, { Schema, Model } from 'mongoose';
+import mongoose from 'mongoose';
 
-export interface IFornecedor {
-  _id?: string;
-  userId: string;
-  nome: string;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-const FornecedorSchema = new Schema<IFornecedor>(
-  {
-    userId: {
-      type: String,
-      required: true,
-      index: true,
-    },
-    nome: {
-      type: String,
-      required: true,
-    },
+const FornecedorSchema = new mongoose.Schema({
+  // Campo principal
+  name: { 
+    type: String,
+    trim: true,
+    required: false // Não obrigatório aqui, validação na API
   },
-  {
-    timestamps: true,
+  // Campo alternativo (compatibilidade)
+  nome: {
+    type: String,
+    trim: true,
+    required: false
+  },
+  category: { 
+    type: String,
+    trim: true,
+    default: ''
+  },
+  phone: { 
+    type: String,
+    trim: true,
+    default: ''
+  },
+  email: { 
+    type: String,
+    trim: true,
+    default: ''
+  },
+  userId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User',
+    required: true 
   }
-);
+}, {
+  timestamps: true
+});
 
-// Índice composto para garantir que não haja fornecedores duplicados por usuário
-FornecedorSchema.index({ userId: 1, nome: 1 }, { unique: true });
-
-const Fornecedor: Model<IFornecedor> = 
-  mongoose.models.Fornecedor || mongoose.model<IFornecedor>('Fornecedor', FornecedorSchema);
-
-export default Fornecedor;
+export default mongoose.models.Fornecedor || mongoose.model('Fornecedor', FornecedorSchema);

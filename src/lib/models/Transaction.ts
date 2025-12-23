@@ -1,81 +1,55 @@
-﻿import mongoose, { Schema, Model } from 'mongoose';
+﻿import mongoose from 'mongoose';
 
-export interface ITag {
-  name: string;
-  color: string;
-}
-
-export interface ITransaction {
-  _id?: string;
-  userId: string;
-  description: string;
-  amount: number;
-  category: string;
-  date: Date;
-  type: 'receita' | 'despesa';
-  fornecedor: string;
-  formaPagamento: string;
-  observacao?: string;
-  tags?: ITag[];
-  isInvestmentTransfer?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-const TransactionSchema = new Schema<ITransaction>(
-  {
-    userId: {
-      type: String,
-      required: true,
-      index: true,
-    },
-    description: {
-      type: String,
-      required: true,
-    },
-    amount: {
-      type: Number,
-      required: true,
-    },
-    category: {
-      type: String,
-      required: true,
-    },
-    date: {
-      type: Date,
-      required: true,
-    },
-    type: {
-      type: String,
-      enum: ['receita', 'despesa'],
-      required: true,
-    },
-    fornecedor: {
-      type: String,
-      required: true,
-    },
-    formaPagamento: {
-      type: String,
-      required: true,
-    },
-    observacao: {
-      type: String,
-    },
-    tags: [{
-      name: String,
-      color: String,
-    }],
-    isInvestmentTransfer: {
-      type: Boolean,
-      default: false,
-    },
+const TransactionSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
-  {
-    timestamps: true,
+  fornecedor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Fornecedor',
+    required: true
+  },
+  paymentMethod: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PaymentMethod',
+    required: true
+  },
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: true
+  },
+  type: {
+    type: String,
+    enum: ['receita', 'despesa'],
+    required: true
+  },
+  amount: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  date: {
+    type: Date,
+    required: true
+  },
+  description: {
+    type: String,
+    default: ''
+  },
+  tags: {
+    type: Array,
+    default: []
   }
-);
+}, {
+  timestamps: true,
+  strict: false // Permite campos flexíveis
+});
 
-const Transaction: Model<ITransaction> = 
-  mongoose.models.Transaction || mongoose.model<ITransaction>('Transaction', TransactionSchema);
+// Índices para performance
+TransactionSchema.index({ userId: 1, date: -1 });
+TransactionSchema.index({ userId: 1, type: 1 });
 
-export default Transaction;
+export default mongoose.models.Transaction || mongoose.model('Transaction', TransactionSchema);

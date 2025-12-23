@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import Layout from '@/components/Layout/Layout';
 import { toast } from 'react-hot-toast';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 
 interface Item {
   _id: string;
@@ -19,11 +20,17 @@ type TabType = 'perfil' | 'fornecedores' | 'pagamentos' | 'categorias';
 
 export default function Configuracoes() {
   const { data: session, update } = useSession();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('perfil');
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  
+  // Modal de deletar conta
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showFinalDeleteModal, setShowFinalDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   
   // Dados do Perfil
   const [perfilData, setPerfilData] = useState({
@@ -72,10 +79,14 @@ export default function Configuracoes() {
       const res = await fetch(apiEndpoints[activeTab]);
       if (res.ok) {
         const data = await res.json();
+        console.log(`📦 ${activeTab} carregados:`, data);
         setItems(data);
+      } else {
+        console.error('❌ Erro na resposta:', res.status);
+        toast.error('Erro ao carregar itens');
       }
     } catch (error) {
-      console.error('Erro ao carregar:', error);
+      console.error('❌ Erro ao carregar:', error);
       toast.error('Erro ao carregar itens');
     } finally {
       setLoading(false);
@@ -96,7 +107,7 @@ export default function Configuracoes() {
 
       if (res.ok) {
         toast.success('Perfil atualizado com sucesso!');
-        update(); // Atualiza a sessão
+        update();
       } else {
         toast.error('Erro ao atualizar perfil');
       }
@@ -135,6 +146,32 @@ export default function Configuracoes() {
       }
     } catch (error) {
       toast.error('Erro ao alterar senha');
+    }
+  };
+
+  // ===== FUNÇÃO DELETAR CONTA =====
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETAR MINHA CONTA') {
+      toast.error('Digite exatamente: DELETAR MINHA CONTA');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/user/delete', {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        toast.success('Conta deletada com sucesso');
+        setTimeout(() => {
+          signOut({ callbackUrl: '/' });
+        }, 2000);
+      } else {
+        const data = await res.json();
+        toast.error(data.message || 'Erro ao deletar conta');
+      }
+    } catch (error) {
+      toast.error('Erro ao deletar conta');
     }
   };
 
@@ -183,21 +220,26 @@ export default function Configuracoes() {
         };
       }
 
+      console.log('📤 Enviando:', body); // ✅ LOG
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 
+      const data = await res.json();
+      console.log('📥 Resposta:', data); // ✅ LOG
+
       if (res.ok) {
         toast.success(editingItem ? 'Item atualizado!' : 'Item criado!');
         setShowModal(false);
         loadItems();
       } else {
-        toast.error('Erro ao salvar');
+        toast.error(data.message || 'Erro ao salvar');
       }
     } catch (error) {
-      console.error('Erro ao salvar:', error);
+      console.error('❌ Erro ao salvar:', error);
       toast.error('Erro ao salvar');
     }
   };
@@ -434,6 +476,26 @@ export default function Configuracoes() {
                     </label>
                   </div>
                 </div>
+
+                {/* ZONA DE PERIGO - DELETAR CONTA */}
+                <div className="border-2 border-red-300 bg-red-50 rounded-xl p-6">
+                  <h3 className="text-xl font-bold text-red-800 mb-4 flex items-center gap-2">
+                    <span>⚠️</span>
+                    Zona de Perigo
+                  </h3>
+
+                  <p className="text-gray-700 mb-4">
+                    Deletar sua conta é uma ação <strong>permanente e irreversível</strong>. 
+                    Todos os seus dados serão perdidos para sempre.
+                  </p>
+
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg"
+                  >
+                    🗑️ Deletar Minha Conta
+                  </button>
+                </div>
               </div>
             )}
 
@@ -441,13 +503,21 @@ export default function Configuracoes() {
             {activeTab !== 'perfil' && (
               <>
                 {/* Botão Adicionar */}
-                <button
-                  onClick={handleCreate}
-                  className="w-full md:w-auto bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-lg mb-6"
-                >
-                  <span className="text-xl">+</span>
-                  <span>Adicionar {getTabLabel()}</span>
-                </button>
+                <div className="flex items-center justify-between mb-6">
+                  <button
+                    onClick={handleCreate}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all shadow-lg"
+                  >
+                    <span className="text-xl">+</span>
+                    <span>Adicionar {getTabLabel()}</span>
+                  </button>
+                  
+                  {items.length > 0 && (
+                    <span className="text-gray-600 font-semibold">
+                      {items.length} {items.length === 1 ? 'item' : 'itens'} cadastrado{items.length === 1 ? '' : 's'}
+                    </span>
+                  )}
+                </div>
 
                 {/* Lista de Itens */}
                 {loading ? (
@@ -466,7 +536,7 @@ export default function Configuracoes() {
                             <span className="text-3xl">{getIcon(item)}</span>
                             <div className="flex-1">
                               <h3 className="text-lg font-bold text-gray-800">
-                                {item.name}
+                                {item.name || '(Sem nome)'}
                               </h3>
                               {item.type && (
                                 <span className={`inline-block text-xs px-3 py-1 rounded-full font-semibold mt-1 ${getBadgeColor(item.type)}`}>
@@ -474,7 +544,7 @@ export default function Configuracoes() {
                                 </span>
                               )}
                               {item.category && (
-                                <p className="text-sm text-gray-600 mt-1">{item.category}</p>
+                                <p className="text-sm text-gray-600 mt-1">📂 {item.category}</p>
                               )}
                             </div>
                           </div>
@@ -538,7 +608,7 @@ export default function Configuracoes() {
           </div>
         </div>
 
-        {/* Modal */}
+        {/* Modal de Itens */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
@@ -547,7 +617,6 @@ export default function Configuracoes() {
               </h2>
 
               <div className="space-y-4">
-                {/* Nome */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Nome *
@@ -565,7 +634,6 @@ export default function Configuracoes() {
                   />
                 </div>
 
-                {/* Campos específicos para Fornecedores */}
                 {activeTab === 'fornecedores' && (
                   <>
                     <div>
@@ -609,7 +677,6 @@ export default function Configuracoes() {
                   </>
                 )}
 
-                {/* Campos específicos para Categorias */}
                 {activeTab === 'categorias' && (
                   <>
                     <div>
@@ -651,7 +718,6 @@ export default function Configuracoes() {
                 )}
               </div>
 
-              {/* Botões */}
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => setShowModal(false)}
@@ -666,6 +732,146 @@ export default function Configuracoes() {
                   {editingItem ? 'Salvar' : 'Criar'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL 1 - PRIMEIRO AVISO DE DELETAR CONTA */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8">
+              <div className="text-center mb-6">
+                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-5xl">⚠️</span>
+                </div>
+                <h2 className="text-3xl font-bold text-red-600 mb-2">
+                  Deletar Conta?
+                </h2>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                  <h3 className="font-bold text-red-800 mb-2 flex items-center gap-2">
+                    <span>❌</span>
+                    O que será perdido:
+                  </h3>
+                  <ul className="space-y-2 text-sm text-red-700">
+                    <li className="flex items-start gap-2">
+                      <span>•</span>
+                      <span>Todas as suas transações (receitas e despesas)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span>•</span>
+                      <span>Todos os seus investimentos registrados</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span>•</span>
+                      <span>Histórico completo de movimentações</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span>•</span>
+                      <span>Fornecedores, categorias e formas de pagamento</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span>•</span>
+                      <span>Badges, conquistas e estatísticas</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span>•</span>
+                      <span><strong>Seu perfil completo</strong></span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4">
+                  <p className="text-yellow-800 font-semibold text-center">
+                    ⚡ Esta ação é <strong>PERMANENTE</strong> e <strong>IRREVERSÍVEL</strong>!
+                  </p>
+                  <p className="text-yellow-700 text-sm text-center mt-2">
+                    Não será possível recuperar seus dados depois.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-3 rounded-xl font-bold transition-all"
+                >
+                  ← Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setShowFinalDeleteModal(true);
+                  }}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold transition-all"
+                >
+                  Continuar →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL 2 - CONFIRMAÇÃO FINAL */}
+        {showFinalDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8">
+              <div className="text-center mb-6">
+                <div className="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                  <span className="text-5xl">🗑️</span>
+                </div>
+                <h2 className="text-3xl font-bold text-red-600 mb-2">
+                  Última Chance!
+                </h2>
+                <p className="text-gray-600">
+                  Tem <strong>CERTEZA ABSOLUTA</strong> que deseja deletar sua conta?
+                </p>
+              </div>
+
+              <div className="bg-red-100 border-2 border-red-400 rounded-xl p-6 mb-6">
+                <p className="text-red-800 font-bold text-center mb-4">
+                  Para confirmar, digite exatamente:
+                </p>
+                <p className="text-center text-xl font-bold text-red-600 mb-4 bg-white py-3 rounded-lg">
+                  DELETAR MINHA CONTA
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-red-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent text-center font-bold"
+                  placeholder="Digite aqui..."
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowFinalDeleteModal(false);
+                    setDeleteConfirmText('');
+                  }}
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-3 rounded-xl font-bold transition-all"
+                >
+                  ← Voltar
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmText !== 'DELETAR MINHA CONTA'}
+                  className={`flex-1 px-6 py-3 rounded-xl font-bold transition-all ${
+                    deleteConfirmText === 'DELETAR MINHA CONTA'
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  🗑️ Deletar Definitivamente
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-500 text-center mt-4">
+                Seus dados serão permanentemente removidos em até 24 horas
+              </p>
             </div>
           </div>
         )}

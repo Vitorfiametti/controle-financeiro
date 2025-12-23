@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/nextauth-config';
 import connectDB from '@/lib/mongodb';
-import Fornecedor from '@/lib/models/Fornecedor';
+import PaymentMethod from '@/lib/models/PaymentMethod';
 
 export default async function handler(
   req: NextApiRequest,
@@ -21,19 +21,13 @@ export default async function handler(
   switch (req.method) {
     case 'GET':
       try {
-        const fornecedores = await (Fornecedor as any).find({ userId: userId })
+        const methods = await (PaymentMethod as any).find({ userId: userId })
+          .sort({ name: 1 })
           .lean();
         
-        // Garantir que sempre tem o campo 'name'
-        const mapped = fornecedores.map((f: any) => ({
-          ...f,
-          _id: f._id.toString(),
-          name: f.name || f.nome || 'Sem nome',
-        }));
+        console.log('📦 Formas de pagamento encontradas:', methods.length);
         
-        console.log('📦 Fornecedores:', mapped.length);
-        
-        return res.status(200).json(mapped);
+        return res.status(200).json(methods);
       } catch (error: any) {
         console.error('❌ Erro ao buscar:', error);
         return res.status(500).json({ message: error.message });
@@ -41,38 +35,25 @@ export default async function handler(
 
     case 'POST':
       try {
-        const { name, nome } = req.body;
-        const fornecedorName = name || nome;
+        const { name } = req.body;
 
-        console.log('📝 Criando fornecedor:', { name, nome, fornecedorName, userId });
+        console.log('📝 Criando forma de pagamento:', { name, userId });
 
-        if (!fornecedorName || !fornecedorName.trim()) {
+        if (!name || !name.trim()) {
           return res.status(400).json({ message: 'Nome é obrigatório' });
         }
 
-        // Criar com AMBOS os campos para compatibilidade total
-        const fornecedor = await (Fornecedor as any).create({
+        const method = await (PaymentMethod as any).create({
           userId: userId,
-          name: fornecedorName.trim(),
-          nome: fornecedorName.trim(), // Mesmo valor nos dois
+          name: name.trim(),
         });
 
-        console.log('✅ Fornecedor criado:', fornecedor);
+        console.log('✅ Criado:', method);
 
-        // Retornar sempre com 'name'
-        return res.status(201).json({
-          _id: fornecedor._id.toString(),
-          name: fornecedor.name || fornecedor.nome,
-          userId: fornecedor.userId,
-          createdAt: fornecedor.createdAt,
-          updatedAt: fornecedor.updatedAt,
-        });
+        return res.status(201).json(method);
       } catch (error: any) {
         console.error('❌ Erro ao criar:', error);
-        return res.status(400).json({ 
-          message: error.message || 'Erro ao criar fornecedor',
-          error: error.toString()
-        });
+        return res.status(400).json({ message: error.message });
       }
 
     case 'DELETE':
@@ -83,12 +64,12 @@ export default async function handler(
           return res.status(400).json({ message: 'ID é obrigatório' });
         }
 
-        const fornecedor = await (Fornecedor as any).findOneAndDelete({
+        const method = await (PaymentMethod as any).findOneAndDelete({
           _id: id as string,
           userId: userId,
         });
 
-        if (!fornecedor) {
+        if (!method) {
           return res.status(404).json({ message: 'Não encontrado' });
         }
 

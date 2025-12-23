@@ -10,7 +10,7 @@ export function useFormasPagamento() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/formas-pagamento');
+      const response = await fetch('/api/payment-methods');
       if (!response.ok) throw new Error('Erro ao carregar formas de pagamento');
       const data = await response.json();
       setFormasPagamento(data);
@@ -25,7 +25,7 @@ export function useFormasPagamento() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/formas-pagamento', {
+      const response = await fetch('/api/payment-methods', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome }),
@@ -49,7 +49,7 @@ export function useFormasPagamento() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/formas-pagamento?id=${id}`, {
+      const response = await fetch(`/api/payment-methods?id=${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Erro ao deletar forma de pagamento');

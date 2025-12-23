@@ -44,9 +44,6 @@ export default function Lancamento() {
   const [valor, setValor] = useState('');
   const [data, setData] = useState('');
   const [observacoes, setObservacoes] = useState('');
-  const [tags, setTags] = useState<Array<{ text: string; color: string }>>([]);
-  const [tagInput, setTagInput] = useState('');
-  const [tagColor, setTagColor] = useState('#3b82f6'); // Azul padrão
 
   // Dados dos novos itens
   const [newFornecedor, setNewFornecedor] = useState({ name: '' });
@@ -114,8 +111,7 @@ export default function Lancamento() {
 
   // ========== CRIAR FORNECEDOR ==========
   const handleCreateFornecedor = async () => {
-    // Validação segura
-    if (!newFornecedor.name || !newFornecedor.name.trim()) {
+    if (!newFornecedor.name.trim()) {
       toast.error('❌ Nome é obrigatório!');
       return;
     }
@@ -149,8 +145,7 @@ export default function Lancamento() {
 
   // ========== CRIAR FORMA DE PAGAMENTO ==========
   const handleCreatePaymentMethod = async () => {
-    // Validação segura
-    if (!newPaymentMethod.name || !newPaymentMethod.name.trim()) {
+    if (!newPaymentMethod.name.trim()) {
       toast.error('❌ Nome é obrigatório!');
       return;
     }
@@ -184,8 +179,7 @@ export default function Lancamento() {
 
   // ========== CRIAR CATEGORIA ==========
   const handleCreateCategory = async () => {
-    // Validação segura
-    if (!newCategory.name || !newCategory.name.trim()) {
+    if (!newCategory.name.trim()) {
       toast.error('❌ Nome é obrigatório!');
       return;
     }
@@ -221,51 +215,6 @@ export default function Lancamento() {
     }
   };
 
-  // ========== GERENCIAR TAGS ==========
-  const handleAddTag = () => {
-    if (!tagInput.trim()) return;
-    
-    const newTag = tagInput.trim(); // Mantém maiúsculas/minúsculas
-    
-    // Não adicionar duplicatas (case insensitive)
-    if (tags.some(tag => tag.text.toLowerCase() === newTag.toLowerCase())) {
-      toast.error('❌ Tag já adicionada!');
-      return;
-    }
-    
-    // Máximo 5 tags
-    if (tags.length >= 5) {
-      toast.error('❌ Máximo de 5 tags por transação!');
-      return;
-    }
-    
-    setTags([...tags, { text: newTag, color: tagColor }]);
-    setTagInput('');
-  };
-
-  const handleRemoveTag = (indexToRemove: number) => {
-    setTags(tags.filter((_, index) => index !== indexToRemove));
-  };
-
-  const handleTagInputKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddTag();
-    }
-  };
-
-  // Cores predefinidas para seleção rápida
-  const tagColors = [
-    '#3b82f6', // Azul
-    '#10b981', // Verde
-    '#f59e0b', // Laranja
-    '#ef4444', // Vermelho
-    '#8b5cf6', // Roxo
-    '#ec4899', // Rosa
-    '#14b8a6', // Teal
-    '#f97316', // Orange
-  ];
-
   // ========== CRIAR TRANSAÇÃO ==========
   const handleCreateTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -286,13 +235,12 @@ export default function Lancamento() {
           category: categoryId,
           amount: parseFloat(valor),
           date: data,
-          description: observacoes,
-          tags: tags
+          description: observacoes
         })
       });
 
       if (res.ok) {
-        toast.success('✅ Transação criada com sucesso!');
+        toast.success('✅ Transação criada!');
         // Limpar formulário
         setFornecedorId('');
         setPaymentMethodId('');
@@ -300,10 +248,7 @@ export default function Lancamento() {
         setValor('');
         setData('');
         setObservacoes('');
-        setTags([]);
-        setTagInput('');
-        // Não redirecionar - permite criar outra transação
-        // router.push('/historico');
+        router.push('/historico');
       } else {
         const error = await res.json();
         toast.error(error.message || '❌ Erro ao criar transação');
@@ -484,100 +429,6 @@ export default function Lancamento() {
                   placeholder="0,00"
                   required
                 />
-              </div>
-
-              {/* Tags */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  🏷️ Tags:
-                </label>
-                <div className="space-y-3">
-                  {/* Input para adicionar tags */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={tagInput}
-                      onChange={(e) => setTagInput(e.target.value)}
-                      onKeyPress={handleTagInputKeyPress}
-                      className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Digite uma tag e pressione Enter"
-                      maxLength={20}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddTag}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-all"
-                    >
-                      + Add
-                    </button>
-                  </div>
-                  
-                  {/* Seletor de cor */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-2">
-                      Escolha a cor da tag:
-                    </label>
-                    <div className="flex gap-2 items-center">
-                      {/* Cores predefinidas */}
-                      {tagColors.map((color) => (
-                        <button
-                          key={color}
-                          type="button"
-                          onClick={() => setTagColor(color)}
-                          className={`w-8 h-8 rounded-full transition-all ${
-                            tagColor === color 
-                              ? 'ring-4 ring-offset-2 ring-gray-400 scale-110' 
-                              : 'hover:scale-110'
-                          }`}
-                          style={{ backgroundColor: color }}
-                          title={color}
-                        />
-                      ))}
-                      
-                      {/* Seletor de cor customizado */}
-                      <div className="relative">
-                        <input
-                          type="color"
-                          value={tagColor}
-                          onChange={(e) => setTagColor(e.target.value)}
-                          className="w-8 h-8 rounded-full cursor-pointer border-2 border-gray-300"
-                          title="Escolher cor customizada"
-                        />
-                      </div>
-                      
-                      {/* Preview da cor selecionada */}
-                      <span className="text-xs text-gray-600 ml-2">
-                        {tagColor}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Lista de tags adicionadas */}
-                  {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg border-2 border-gray-200">
-                      {tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold text-white shadow-md"
-                          style={{ backgroundColor: tag.color }}
-                        >
-                          #{tag.text}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveTag(index)}
-                            className="hover:bg-white hover:bg-opacity-20 rounded-full w-5 h-5 flex items-center justify-center transition-all"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  
-                  <p className="text-xs text-gray-500">
-                    {tags.length}/5 tags • Pressione Enter ou clique em "+ Add" para adicionar
-                  </p>
-                </div>
               </div>
 
               {/* Observações */}
