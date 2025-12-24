@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { ITransaction } from '@/lib/models/Transaction';
+import { ITransaction } from '@/types';
 
 interface ReceitasDespesasChartProps {
   transactions: ITransaction[];
