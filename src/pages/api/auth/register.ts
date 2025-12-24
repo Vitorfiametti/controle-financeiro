@@ -1,7 +1,5 @@
-// src/pages/api/auth/register.ts
-
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { connectDB } from '@/utils/mongodb';
+import connectDB from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import bcrypt from 'bcryptjs';
 
@@ -20,7 +18,7 @@ export default async function handler(
 
     const { name, email, password } = req.body;
 
-    // Validaçõesnpm install mongoose bcryptjs @types/bcryptjs
+    // Validações
     if (!name || !email || !password) {
       return res.status(400).json({ 
         message: 'Todos os campos são obrigatórios' 
@@ -64,7 +62,6 @@ export default async function handler(
   } catch (error: any) {
     console.error('Erro ao registrar usuário:', error);
     
-    // Retornar erro em formato JSON
     return res.status(500).json({ 
       message: 'Erro ao criar usuário. Tente novamente.',
       error: error.message 
