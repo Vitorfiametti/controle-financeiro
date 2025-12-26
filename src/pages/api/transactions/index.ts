@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/nextauth-config';
 import connectDB from '@/lib/mongodb';
 import Transaction from '@/lib/models/Transaction';
+import Fornecedor from '@/lib/models/Fornecedor';
+import PaymentMethod from '@/lib/models/PaymentMethod';
+import Category from '@/lib/models/Category';
 
 export default async function handler(
   req: NextApiRequest,
@@ -24,12 +27,11 @@ export default async function handler(
         const transactions = await (Transaction as any)
           .find({ userId: userId })
           .populate('fornecedor', 'name nome')
-          .populate('paymentMethod', 'name')
-          .populate('category', 'name type icon')
+          .populate('paymentMethod', 'name nome')
+          .populate('category', 'name type icon nome')
           .sort({ date: -1 })
           .lean()
           .catch((err: any) => {
-            // Se populate falhar, buscar sem populate
             console.warn('⚠️ Populate falhou, buscando sem populate:', err.message);
             return (Transaction as any)
               .find({ userId: userId })
@@ -61,7 +63,7 @@ export default async function handler(
           tags
         } = req.body;
 
-        console.log('📝 Criando transação:', {
+        console.log('📝 Dados recebidos:', {
           fornecedor,
           paymentMethod,
           type,
@@ -97,32 +99,91 @@ export default async function handler(
           return res.status(400).json({ message: 'Tipo inválido' });
         }
 
-        // Processar tags - garantir que seja array
+        // Converter nomes para IDs se necessário
+        let fornecedorId = fornecedor;
+        let paymentMethodId = paymentMethod;
+        let categoryId = category;
+
+        // Se fornecedor não é um ObjectId válido, buscar pelo nome
+        if (fornecedor && !fornecedor.match(/^[0-9a-fA-F]{24}$/)) {
+          console.log('🔍 Buscando fornecedor por nome:', fornecedor);
+          const fornecedorDoc = await (Fornecedor as any).findOne({
+            userId,
+            $or: [
+              { name: fornecedor },
+              { nome: fornecedor }
+            ]
+          });
+          
+          if (fornecedorDoc) {
+            fornecedorId = fornecedorDoc._id;
+            console.log('✅ Fornecedor encontrado:', fornecedorId);
+          } else {
+            console.warn('⚠️ Fornecedor não encontrado, usando valor original');
+          }
+        }
+
+        // Se paymentMethod não é um ObjectId válido, buscar pelo nome
+        if (paymentMethod && !paymentMethod.match(/^[0-9a-fA-F]{24}$/)) {
+          console.log('🔍 Buscando forma de pagamento por nome:', paymentMethod);
+          const paymentMethodDoc = await (PaymentMethod as any).findOne({
+            userId,
+            $or: [
+              { name: paymentMethod },
+              { nome: paymentMethod }
+            ]
+          });
+          
+          if (paymentMethodDoc) {
+            paymentMethodId = paymentMethodDoc._id;
+            console.log('✅ Forma de pagamento encontrada:', paymentMethodId);
+          } else {
+            console.warn('⚠️ Forma de pagamento não encontrada, usando valor original');
+          }
+        }
+
+        // Se category não é um ObjectId válido, buscar pelo nome
+        if (category && !category.match(/^[0-9a-fA-F]{24}$/)) {
+          console.log('🔍 Buscando categoria por nome:', category);
+          const categoryDoc = await (Category as any).findOne({
+            userId,
+            type,
+            $or: [
+              { name: category },
+              { nome: category }
+            ]
+          });
+          
+          if (categoryDoc) {
+            categoryId = categoryDoc._id;
+            console.log('✅ Categoria encontrada:', categoryId);
+          } else {
+            console.warn('⚠️ Categoria não encontrada, usando valor original');
+          }
+        }
+
+        // Processar tags
         let processedTags = [];
         if (tags && Array.isArray(tags)) {
           processedTags = tags;
         }
 
-        console.log('🏷️ Tags recebidas:', tags);
-        console.log('🏷️ Tags processadas:', processedTags);
-
         const transactionData = {
           userId: userId,
-          fornecedor,
-          paymentMethod,
+          fornecedor: fornecedorId,
+          paymentMethod: paymentMethodId,
           type,
-          category,
+          category: categoryId,
           amount: parseFloat(amount),
           date: new Date(date),
           description: description || '',
         };
 
-        // Adicionar tags apenas se existir e não estiver vazio
         if (processedTags.length > 0) {
           (transactionData as any).tags = processedTags;
         }
 
-        console.log('📝 Dados da transação:', transactionData);
+        console.log('📝 Dados finais da transação:', transactionData);
 
         const transaction = await (Transaction as any).create(transactionData);
 
@@ -131,9 +192,9 @@ export default async function handler(
         return res.status(201).json(transaction);
       } catch (error: any) {
         console.error('❌ Erro ao criar transação:', error);
-        return res.status(400).json({ 
+        return res.status(500).json({ 
           message: error.message,
-          error: error.toString()
+          error: 'Erro ao criar transação'
         });
       }
 
@@ -146,22 +207,26 @@ export default async function handler(
         }
 
         const transaction = await (Transaction as any).findOneAndDelete({
-          _id: id as string,
-          userId: userId,
+          _id: id,
+          userId: userId
         });
 
         if (!transaction) {
           return res.status(404).json({ message: 'Transação não encontrada' });
         }
 
+        console.log('✅ Transação deletada:', id);
+
         return res.status(200).json({ message: 'Transação deletada com sucesso' });
       } catch (error: any) {
         console.error('❌ Erro ao deletar transação:', error);
-        return res.status(400).json({ message: error.message });
+        return res.status(500).json({ 
+          message: error.message,
+          error: 'Erro ao deletar transação'
+        });
       }
 
     default:
-      res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
-      return res.status(405).end(`Método ${req.method} não permitido`);
+      return res.status(405).json({ message: 'Método não permitido' });
   }
 }
