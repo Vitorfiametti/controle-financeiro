@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { models } from 'mongoose';
 
 const FornecedorSchema = new mongoose.Schema({
   // Campo principal

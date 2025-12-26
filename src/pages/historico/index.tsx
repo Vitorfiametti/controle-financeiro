@@ -5,6 +5,12 @@ import Layout from '@/components/Layout/Layout';
 import { toast } from 'react-hot-toast';
 import Head from 'next/head';
 
+interface Tag {
+  text?: string;
+  name?: string;
+  color: string;
+}
+
 interface Transaction {
   _id: string;
   fornecedor: {
@@ -26,6 +32,7 @@ interface Transaction {
   amount: number;
   date: string;
   description: string;
+  tags?: Tag[];
   isInvestmentTransfer?: boolean;
   observacao?: string;
 }
@@ -41,6 +48,7 @@ export default function Historico() {
   const [dataFim, setDataFim] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [filterTag, setFilterTag] = useState('');
 
   useEffect(() => {
     if (!session) {
@@ -69,6 +77,20 @@ export default function Historico() {
     }
   };
 
+  // Obter todas as tags únicas
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    transactions.forEach(t => {
+      if (t.tags && t.tags.length > 0) {
+        t.tags.forEach(tag => {
+          const tagText = tag.text || tag.name || '';
+          if (tagText) tagSet.add(tagText.toLowerCase());
+        });
+      }
+    });
+    return Array.from(tagSet).sort();
+  }, [transactions]);
+
   // Filtrar transações
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => {
@@ -82,6 +104,19 @@ export default function Historico() {
 
       // Filtro de categoria
       if (filterCategory && t.category?.name !== filterCategory) return false;
+
+      // Filtro de tag
+      if (filterTag) {
+        const hasTags = t.tags && t.tags.length > 0;
+        if (!hasTags) return false;
+        
+        const hasMatchingTag = t.tags!.some(tag => {
+          const tagText = (tag.text || tag.name || '').toLowerCase();
+          return tagText === filterTag.toLowerCase();
+        });
+        
+        if (!hasMatchingTag) return false;
+      }
 
       // Filtro de data
       if (dataInicio || dataFim) {
@@ -100,7 +135,7 @@ export default function Historico() {
 
       return true;
     });
-  }, [transactions, dataInicio, dataFim, filterType, filterCategory]);
+  }, [transactions, dataInicio, dataFim, filterType, filterCategory, filterTag]);
 
   // Obter categorias únicas
   const categories = useMemo(() => {
@@ -137,6 +172,7 @@ export default function Historico() {
     setDataFim('');
     setFilterType('');
     setFilterCategory('');
+    setFilterTag('');
   };
 
   const formatDate = (dateString: string) => {
@@ -217,7 +253,7 @@ export default function Historico() {
             <h3 className="text-2xl font-bold text-gray-800 mb-4 text-center">
               🔍 Filtros do Histórico
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Data Início:
@@ -273,6 +309,22 @@ export default function Historico() {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  🏷️ Tag:
+                </label>
+                <select
+                  value={filterTag}
+                  onChange={(e) => setFilterTag(e.target.value)}
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Todas as tags</option>
+                  {allTags.map(tag => (
+                    <option key={tag} value={tag}>#{tag}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex items-end">
                 <button
                   onClick={clearFilters}
@@ -284,9 +336,10 @@ export default function Historico() {
             </div>
 
             {/* Info sobre filtros ativos */}
-            {(dataInicio || dataFim || filterType || filterCategory) && (
+            {(dataInicio || dataFim || filterType || filterCategory || filterTag) && (
               <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-center text-blue-800 text-sm">
                 Exibindo {filteredTransactions.length} de {transactions.filter(t => !t.isInvestmentTransfer).length} transações
+                {filterTag && ` com tag #${filterTag}`}
               </div>
             )}
           </div>
@@ -299,7 +352,7 @@ export default function Historico() {
                 Nenhuma transação encontrada
               </h3>
               <p className="text-gray-600 mb-6">
-                {filterType || filterCategory || dataInicio || dataFim
+                {filterType || filterCategory || filterTag || dataInicio || dataFim
                   ? 'Tente ajustar os filtros para ver mais resultados.'
                   : 'Comece criando sua primeira transação!'
                 }
@@ -337,7 +390,7 @@ export default function Historico() {
                             {transaction.type === 'receita' ? '↗ Receita' : '↘ Despesa'}
                           </span>
                         </div>
-                        <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+                        <div className="flex flex-wrap gap-3 text-sm text-gray-600 mb-2">
                           <span>📂 {transaction.category?.name || 'Sem categoria'}</span>
                           <span>💳 {transaction.paymentMethod?.name || 'Sem pagamento'}</span>
                           <span>📅 {formatDate(transaction.date)}</span>
@@ -348,15 +401,15 @@ export default function Historico() {
                           </p>
                         )}
                         {/* Tags com cores */}
-                        {(transaction as any).tags && (transaction as any).tags.length > 0 && (
+                        {transaction.tags && transaction.tags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
-                            {(transaction as any).tags.map((tag: any, index: number) => (
+                            {transaction.tags.map((tag, index) => (
                               <span
                                 key={index}
                                 className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold text-white shadow-sm"
                                 style={{ backgroundColor: tag.color || '#3b82f6' }}
                               >
-                                #{tag.text || tag}
+                                #{tag.text || tag.name}
                               </span>
                             ))}
                           </div>
