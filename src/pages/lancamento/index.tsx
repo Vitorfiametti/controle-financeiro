@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import Layout from '@/components/Layout/Layout';
 import { toast } from 'react-hot-toast';
@@ -25,6 +25,8 @@ interface Category {
 export default function Lancamento() {
   const { data: session } = useSession();
   const router = useRouter();
+  const { edit } = router.query; // Pegar ID da transação para editar
+  const hasLoadedTransaction = useRef(false); // Ref para controlar carregamento único
 
   // Dados dos dropdowns
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
@@ -35,6 +37,10 @@ export default function Lancamento() {
   const [showFornecedorModal, setShowFornecedorModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+
+  // Estado de edição
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState('');
 
   // Dados da transação
   const [fornecedorId, setFornecedorId] = useState('');
@@ -64,6 +70,47 @@ export default function Lancamento() {
     }
     loadAllData();
   }, [session]);
+
+  // Carregar transação para editar
+  useEffect(() => {
+    if (edit && typeof edit === 'string' && !hasLoadedTransaction.current && fornecedores.length > 0) {
+      loadTransactionToEdit(edit);
+      hasLoadedTransaction.current = true; // Marca como carregado
+    }
+  }, [edit, fornecedores.length]);
+
+  const loadTransactionToEdit = async (id: string) => {
+    try {
+      const res = await fetch('/api/transactions');
+      if (res.ok) {
+        const transactions = await res.json();
+        const transaction = transactions.find((t: any) => t._id === id);
+        
+        if (transaction) {
+          setIsEditing(true);
+          setEditingId(id);
+          setFornecedorId(transaction.fornecedor?._id || '');
+          setPaymentMethodId(transaction.paymentMethod?._id || '');
+          setTipoLancamento(transaction.type);
+          setCategoryId(transaction.category?._id || '');
+          setValor(transaction.amount.toString());
+          
+          // Formatar data para input (YYYY-MM-DD)
+          const dateObj = new Date(transaction.date);
+          const formattedDate = dateObj.toISOString().split('T')[0];
+          setData(formattedDate);
+          
+          setObservacoes(transaction.description || '');
+          setTags(transaction.tags || []);
+          
+          toast.success('✏️ Modo de edição ativado!');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar transação:', error);
+      toast.error('❌ Erro ao carregar transação');
+    }
+  };
 
   const loadAllData = async () => {
     await Promise.all([
@@ -266,7 +313,7 @@ export default function Lancamento() {
     '#f97316', // Orange
   ];
 
-  // ========== CRIAR TRANSAÇÃO ==========
+  // ========== CRIAR/EDITAR TRANSAÇÃO ==========
   const handleCreateTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -276,41 +323,59 @@ export default function Lancamento() {
     }
 
     try {
-      const res = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fornecedor: fornecedorId,
-          paymentMethod: paymentMethodId,
-          type: tipoLancamento,
-          category: categoryId,
-          amount: parseFloat(valor),
-          date: data,
-          description: observacoes,
-          tags: tags
-        })
-      });
+      const transactionData = {
+        fornecedor: fornecedorId,
+        paymentMethod: paymentMethodId,
+        type: tipoLancamento,
+        category: categoryId,
+        amount: parseFloat(valor),
+        date: data,
+        description: observacoes,
+        tags: tags
+      };
 
-      if (res.ok) {
-        toast.success('✅ Transação criada com sucesso!');
-        // Limpar formulário
-        setFornecedorId('');
-        setPaymentMethodId('');
-        setCategoryId('');
-        setValor('');
-        setData('');
-        setObservacoes('');
-        setTags([]);
-        setTagInput('');
-        // Não redirecionar - permite criar outra transação
-        // router.push('/historico');
+      // Se estiver editando, fazer PUT
+      if (isEditing && editingId) {
+        const res = await fetch(`/api/transactions?id=${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(transactionData)
+        });
+
+        if (res.ok) {
+          toast.success('✅ Transação atualizada com sucesso!');
+          router.push('/historico');
+        } else {
+          const error = await res.json();
+          toast.error(error.message || '❌ Erro ao atualizar transação');
+        }
       } else {
-        const error = await res.json();
-        toast.error(error.message || '❌ Erro ao criar transação');
+        // Se não estiver editando, fazer POST (criar nova)
+        const res = await fetch('/api/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(transactionData)
+        });
+
+        if (res.ok) {
+          toast.success('✅ Transação criada com sucesso!');
+          // Limpar formulário
+          setFornecedorId('');
+          setPaymentMethodId('');
+          setCategoryId('');
+          setValor('');
+          setData('');
+          setObservacoes('');
+          setTags([]);
+          setTagInput('');
+        } else {
+          const error = await res.json();
+          toast.error(error.message || '❌ Erro ao criar transação');
+        }
       }
     } catch (error) {
       console.error('❌ Erro:', error);
-      toast.error('❌ Erro ao criar transação');
+      toast.error(isEditing ? '❌ Erro ao atualizar transação' : '❌ Erro ao criar transação');
     }
   };
 
@@ -327,9 +392,17 @@ export default function Lancamento() {
         <div className="max-w-2xl mx-auto">
           <div className="bg-white rounded-3xl shadow-2xl p-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-8 flex items-center gap-3">
-              <span>📝</span>
-              <span>Nova Transação</span>
+              <span>{isEditing ? '✏️' : '📝'}</span>
+              <span>{isEditing ? 'Editar Transação' : 'Nova Transação'}</span>
             </h1>
+
+            {isEditing && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-800">
+                  ✏️ <strong>Modo de edição:</strong> Altere os campos abaixo e clique em "Atualizar Transação"
+                </p>
+              </div>
+            )}
 
             <form onSubmit={handleCreateTransaction} className="space-y-6">
               
@@ -599,7 +672,7 @@ export default function Lancamento() {
                 type="submit"
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 rounded-xl transition-all shadow-xl text-lg"
               >
-                💾 Salvar Transação
+                {isEditing ? '✏️ Atualizar Transação' : '💾 Salvar Transação'}
               </button>
             </form>
           </div>

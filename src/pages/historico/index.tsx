@@ -167,6 +167,11 @@ export default function Historico() {
     }
   };
 
+  const handleEdit = (transaction: Transaction) => {
+    // Redirecionar para página de lançamento com ID da transação
+    router.push(`/lancamento?edit=${transaction._id}`);
+  };
+
   const clearFilters = () => {
     setDataInicio('');
     setDataFim('');
@@ -424,12 +429,22 @@ export default function Historico() {
                       }`}>
                         {transaction.type === 'receita' ? '+' : '-'} {formatCurrency(transaction.amount)}
                       </div>
-                      <button
-                        onClick={() => handleDelete(transaction._id)}
-                        className="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg font-semibold transition-all"
-                      >
-                        🗑️
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(transaction)}
+                          className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-semibold transition-all"
+                          title="Editar transação"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => handleDelete(transaction._id)}
+                          className="bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg font-semibold transition-all"
+                          title="Excluir transação"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

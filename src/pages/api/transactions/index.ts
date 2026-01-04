@@ -230,6 +230,94 @@ export default async function handler(
         });
       }
 
+    case 'PUT':
+      try {
+        const { id } = req.query;
+        const { 
+          fornecedor, 
+          paymentMethod, 
+          type, 
+          category, 
+          amount, 
+          date, 
+          description,
+          tags
+        } = req.body;
+
+        if (!id) {
+          return res.status(400).json({ message: 'ID é obrigatório' });
+        }
+
+        // Converter nomes para IDs se necessário (mesmo processo do POST)
+        let fornecedorId = fornecedor;
+        let paymentMethodId = paymentMethod;
+        let categoryId = category;
+
+        if (fornecedor && !fornecedor.match(/^[0-9a-fA-F]{24}$/)) {
+          const fornecedorDoc = await (Fornecedor as any).findOne({
+            userId,
+            $or: [{ name: fornecedor }, { nome: fornecedor }]
+          });
+          if (fornecedorDoc) fornecedorId = fornecedorDoc._id;
+        }
+
+        if (paymentMethod && !paymentMethod.match(/^[0-9a-fA-F]{24}$/)) {
+          const paymentMethodDoc = await (PaymentMethod as any).findOne({
+            userId,
+            $or: [{ name: paymentMethod }, { nome: paymentMethod }]
+          });
+          if (paymentMethodDoc) paymentMethodId = paymentMethodDoc._id;
+        }
+
+        if (category && !category.match(/^[0-9a-fA-F]{24}$/)) {
+          const categoryDoc = await (Category as any).findOne({
+            userId,
+            type,
+            $or: [{ name: category }, { nome: category }]
+          });
+          if (categoryDoc) categoryId = categoryDoc._id;
+        }
+
+        const dateObj = new Date(date + 'T12:00:00');
+
+        const updateData: any = {
+          fornecedor: fornecedorId,
+          paymentMethod: paymentMethodId,
+          type,
+          category: categoryId,
+          amount: parseFloat(amount),
+          date: dateObj,
+          description: description || '',
+        };
+
+        if (tags && Array.isArray(tags)) {
+          updateData.tags = tags;
+        }
+
+        const transaction = await (Transaction as any).findOneAndUpdate(
+          { _id: id, userId },
+          updateData,
+          { new: true }
+        )
+          .populate('fornecedor', 'name nome')
+          .populate('paymentMethod', 'name nome')
+          .populate('category', 'name type icon nome');
+
+        if (!transaction) {
+          return res.status(404).json({ message: 'Transação não encontrada' });
+        }
+
+        console.log('✅ Transação atualizada:', transaction);
+
+        return res.status(200).json(transaction);
+      } catch (error: any) {
+        console.error('❌ Erro ao atualizar transação:', error);
+        return res.status(500).json({ 
+          message: error.message,
+          error: 'Erro ao atualizar transação'
+        });
+      }
+
     default:
       return res.status(405).json({ message: 'Método não permitido' });
   }
