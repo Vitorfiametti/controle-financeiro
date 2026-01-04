@@ -168,6 +168,10 @@ export default async function handler(
           processedTags = tags;
         }
 
+        // Corrigir data para não perder 1 dia (timezone)
+        // Se a data vem como "2024-12-29", adicionar horário meio-dia
+        const dateObj = new Date(date + 'T12:00:00');
+
         const transactionData = {
           userId: userId,
           fornecedor: fornecedorId,
@@ -175,7 +179,7 @@ export default async function handler(
           type,
           category: categoryId,
           amount: parseFloat(amount),
-          date: new Date(date),
+          date: dateObj,
           description: description || '',
         };
 

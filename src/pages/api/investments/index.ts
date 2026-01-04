@@ -56,6 +56,8 @@ export default async function handler(
         }
 
         // Criar investimento
+        const dateObj = new Date(data + 'T12:00:00'); // Corrigir timezone
+        
         const investment = await (Investment as any).create({
           userId,
           tipo,
@@ -63,7 +65,7 @@ export default async function handler(
           instituicao,
           valor: parseFloat(valor),
           rentabilidade: parseFloat(rentabilidade || 0),
-          data,
+          data: dateObj,
           observacao,
         });
 
@@ -130,13 +132,14 @@ export default async function handler(
         // ========== CRIAR TRANSAÇÃO COM IDS CORRETOS ==========
         
         const valorTransacao = Math.abs(parseFloat(valor)); // Sempre positivo
+        const transactionDateObj = new Date(data + 'T12:00:00'); // Corrigir timezone
         
         await (Transaction as any).create({
           userId,
           description: `${tipo === 'aplicacao' ? 'Aplicação' : 'Resgate'} em ${categoria} - ${instituicao}`,
           amount: valorTransacao,
           category: categoryDoc._id, // ✅ ID
-          date: data,
+          date: transactionDateObj,
           type: tipoTransacao,
           fornecedor: fornecedorDoc._id, // ✅ ID
           paymentMethod: paymentMethodDoc._id, // ✅ ID
