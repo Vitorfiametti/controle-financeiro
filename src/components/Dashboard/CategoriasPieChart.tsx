@@ -12,38 +12,43 @@ export default function CategoriasPieChart({ transactions }: CategoriasPieChartP
       return { categories: [], total: 0, hasData: false };
     }
 
-    // Filtrar apenas despesas
-    const filtered = transactions.filter(t => t.type === 'despesa');
+    // Filtrar apenas despesas E excluir transações automáticas de investimento
+    const filtered = transactions.filter(t => 
+      t.type === 'despesa' && 
+      !t.isInvestmentTransfer && 
+      !(t as any).observacao?.includes('[AUTO]')
+    );
 
     if (filtered.length === 0) {
       return { categories: [], total: 0, hasData: false };
     }
 
-    // Agrupar por categoria usando helper
+    // Agrupar por categoria usando helper (normalizar nome)
     const grouped = filtered.reduce((acc, t) => {
-      const categoryName = getCategoryName(t.category);
+      const categoryName = getCategoryName(t.category).trim().toLowerCase(); // Normalizar
       if (!acc[categoryName]) {
-        acc[categoryName] = 0;
+        acc[categoryName] = {
+          displayName: getCategoryName(t.category), // Nome original para display
+          value: 0,
+          icon: getCategoryIcon(t.category)
+        };
       }
-      acc[categoryName] += t.amount;
+      acc[categoryName].value += t.amount;
       return acc;
-    }, {} as Record<string, number>);
+    }, {} as Record<string, { displayName: string; value: number; icon: string }>);
 
     const categories = Object.entries(grouped)
-      .map(([name, value], index) => {
-        // Encontrar o ícone da primeira transação com essa categoria
-        const transaction = filtered.find(t => getCategoryName(t.category) === name);
-        
-        return {
-          name,
-          value,
-          icon: transaction ? getCategoryIcon(transaction.category) : '📊',
-          color: `hsl(${index * 40}, 70%, 60%)`
-        };
-      })
+      .map(([key, data], index) => ({
+        name: data.displayName,
+        value: data.value,
+        icon: data.icon,
+        color: `hsl(${index * 45}, 70%, 55%)` // Melhor distribuição de cores
+      }))
       .sort((a, b) => b.value - a.value);
 
     const total = categories.reduce((sum, cat) => sum + cat.value, 0);
+
+    console.log('📊 Categorias agrupadas:', categories); // Debug
 
     return { categories, total, hasData: true };
   }, [transactions]);
@@ -68,11 +73,11 @@ export default function CategoriasPieChart({ transactions }: CategoriasPieChartP
       </h3>
       
       <div className="space-y-3">
-        {chartData.categories.map((cat, index) => {
+        {chartData.categories.map((cat) => {
           const percentage = ((cat.value / chartData.total) * 100).toFixed(1);
           
           return (
-            <div key={index} className="space-y-2">
+            <div key={cat.name} className="space-y-2">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">{cat.icon}</span>
